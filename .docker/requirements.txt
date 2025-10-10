@@ -1,0 +1,16 @@
+# requirements.txt
+
+# --- 基本ライブラリ ---
+pandas
+yfinance
+SQLAlchemy
+
+# --- PostgreSQL接続用ドライバ ---
+psycopg2-binary
+
+# --- Webアプリ用 ---
+Flask
+gunicorn
+
+# --- 環境変数ファイル(.env)読み込み用 ---
+python-dotenv

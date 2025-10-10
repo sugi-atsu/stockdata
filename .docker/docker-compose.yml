@@ -1,0 +1,56 @@
+# stockdata/docker-compose.yml
+
+services:
+  # Pythonアプリケーション (Webサーバー)
+  stock-app:
+    build:
+      # buildのコンテキスト(基準)を、このファイルから見て一つ上の階層(プロジェクトルート)に設定
+      context: ..
+      # 使用するDockerfileのパスをコンテキストからの相対パスで指定
+      dockerfile: .docker/Dockerfile
+    container_name: stock-app
+    restart: always
+    volumes:
+      # ローカルのsrcディレクトリをコンテナの/appにマウントし、コードの変更を即時反映させる
+      - ../src:/app
+      - ../scripts:/app/scripts
+      - ../data:/app/data
+    ports:
+      # ホストPC/VPSの8001番ポートをコンテナの5000番ポートにマッピング
+      - "8001:5000"
+    env_file:
+      # 使用する環境変数ファイルのパスを指定
+      - ../.env
+    depends_on:
+      # stock-dbサービスが起動してからこのサービスを起動する
+      - stock-db
+    networks:
+      # このサービスが所属するネットワークを指定
+      - stock-network
+
+  # データベース (PostgreSQL)
+  stock-db:
+    image: postgres:15
+    container_name: stock-db
+    restart: always
+    env_file:
+      # 使用する環境変数ファイルのパスを指定
+      - ../.env
+    volumes:
+      # 名前付きボリュームを使い、コンテナを削除してもDBのデータを永続化する
+      - stock-pgdata:/var/lib/postgresql/data
+    ports:
+      # ホストPC/VPSの5433番ポートをコンテナの5432番ポートにマッピング
+      # (既存プロジェクトの5432ポートとの衝突を避ける)
+      - "5433:5432"
+    networks:
+      - stock-network
+
+# データ永続化のための名前付きボリュームを定義
+volumes:
+  stock-pgdata:
+
+# コンテナ間通信のためのカスタムブリッジネットワークを定義
+networks:
+  stock-network:
+    driver: bridge

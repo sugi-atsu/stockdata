@@ -1,0 +1,20 @@
+# stockdata/.dockerignore
+
+# Git
+.gitignore
+
+# Pythonキャッシュ
+__pycache__/
+*.pyc
+
+# IDE/Editor
+.vscode/
+
+# Jupyter Notebook
+*.ipynb
+
+# 機密情報 (最重要)
+*.json
+
+# ローカル環境変数ファイル
+.env
