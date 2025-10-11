@@ -1,5 +1,3 @@
-# StockData_loader.py
-
 import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -9,8 +7,8 @@ import os
 import time
 import traceback
 import sys
-from datetime import datetime, timedelta
-from sqlalchemy import create_engine, text
+from datetime import datetime, timedelta, date # ★変更点: dateを追加インポート
+from sqlalchemy import create_engine, text, inspect # ★変更点: inspectを追加インポート
 import config
 
 # ====================================================================
@@ -28,12 +26,32 @@ TICKER_CSV_FILE = config.TICKER_CSV_FILE
 
 # --- スクリプト内で直接定義するパラメータ (スクリプトの動作を決めるもの) ---
 CHUNK_SIZE = 500
-DELAY_SECONDS = 3
-DAYS_TO_FETCH = 1
+DELAY_SECONDS = 30
 
 # ====================================================================
 # 2. 関数定義
 # ====================================================================
+
+def get_latest_date_from_db(engine, table_name):
+    """★追加: データベースから最新の日付を取得する関数"""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table(table_name):
+            print(f"Table '{table_name}' does not exist. Running in full load mode.")
+            return None # テーブルが存在しない場合はNoneを返す
+
+        with engine.connect() as connection:
+            result = connection.execute(text(f'SELECT MAX("日付") FROM public."{table_name}"'))
+            latest_date = result.scalar()
+            if latest_date:
+                print(f"Latest date in DB is {latest_date}. Fetching data from the next day.")
+                return latest_date
+            else:
+                print("Table is empty. Running in full load mode.")
+                return None # テーブルが空の場合はNoneを返す
+    except Exception as e:
+        print(f"Error fetching latest date from DB: {e}. Running in full load mode.", file=sys.stderr)
+        return None
 
 def load_tickers_from_csv(file_path):
     """CSVからティッカーと会社名のDataFrameを読み込む。"""
@@ -182,15 +200,33 @@ def main():
     start_time = time.time()
     print(f"--- Script started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---")
 
-    today = datetime.today()
-    start_date = today - timedelta(days=DAYS_TO_FETCH)
-    # start_date_str = start_date.strftime("%Y-%m-%d")
-    start_date_str = '2015-01-01'
-    end_date_str = today.strftime("%Y-%m-%d")
-    print(f"Target Period: {start_date_str} to {end_date_str}")
-
+    # ★変更点: DBエンジンを先に作成し、最新日付を取得
     db_engine = create_db_engine()
     if not db_engine: sys.exit(1)
+    
+    latest_date_in_db = get_latest_date_from_db(db_engine, TABLE_NAME)
+
+    if latest_date_in_db:
+        # 差分更新モード: 最新日付の翌日からデータを取得
+        start_date_obj = latest_date_in_db + timedelta(days=1)
+        start_date_str = start_date_obj.strftime("%Y-%m-%d")
+    else:
+        # 全件取得モード: 2015年からデータを取得
+        start_date_str = '2015-01-01'
+
+    today = datetime.today()
+    end_date_str = today.strftime("%Y-%m-%d")
+
+    # ★変更点: データベースが既に最新の場合、処理を終了する
+    if datetime.strptime(start_date_str, "%Y-%m-%d").date() > today.date():
+        print("Database is already up to date. No new data to fetch. Exiting.")
+        return
+
+    print(f"Target Period: {start_date_str} to {end_date_str}")
+    
+    # ★変更点: DBエンジン作成処理は先頭に移動済み
+    # db_engine = create_db_engine()
+    # if not db_engine: sys.exit(1)
 
     ticker_df = load_tickers_from_csv(TICKER_CSV_FILE)
 
@@ -202,6 +238,7 @@ def main():
         print("Ticker list is empty. Exiting."); return
 
     yf_tickers = [f"{ticker}.T" for ticker in ticker_df["Ticker"]]
+    # ★変更点: カラム名を 'CompanyName' から '銘柄名' に合わせる
     ticker_df = ticker_df.rename(columns={"Ticker": "証券コード", "CompanyName": "銘柄名"})
     
     ticker_chunks = [yf_tickers[i:i + CHUNK_SIZE] for i in range(0, len(yf_tickers), CHUNK_SIZE)]
@@ -221,6 +258,7 @@ def main():
             continue
             
         print("Merging company names for the current chunk...")
+        # ★変更点: マージするカラム名を 'CompanyName' から '銘柄名' に合わせる
         final_dataframe = pd.merge(processed_df, ticker_df, on="証券コード", how="left")
         print("Merge complete.")
 
