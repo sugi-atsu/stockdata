@@ -10,6 +10,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 # --- 基本設定 ---
 TABLE_NAME = "stockdata"
+TABLE_NAME_FIXED = "stockdata_fixed"
 TICKER_CSV_FILE = "data/tickers.csv"
 
 

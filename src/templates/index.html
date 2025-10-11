@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- タイトル部分も動的に変更するため、一旦汎用的にしておく -->
     <title>株価データ ダウンローダー</title>
     <style>
         body { 
@@ -25,15 +26,32 @@
             background-color: #fff; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
         }
-        h1 { 
-            text-align: center; 
+        /* h1とプラン表示エリアのスタイル */
+        #header-area h1 {
+            text-align: center;
             color: #2c3e50;
             font-size: 1.8em;
-            margin-bottom: 1em;
+            margin-bottom: 0.25em; /* h1の下マージンを減らす */
         }
-        .form-group { 
-            margin-bottom: 1.5em; 
+        #plan-display {
+            text-align: center;
+            margin-bottom: 1.5em;
+            padding: 0.5em;
+            border-radius: 6px;
+            min-height: 50px; /* 高さを確保してレイアウト崩れを防ぐ */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s;
         }
+        #plan-display.success { background-color: #e6f7ff; border: 1px solid #91d5ff; }
+        #plan-display.error { background-color: #fff1f0; border: 1px solid #ffa39e; }
+        #plan-name { font-weight: bold; font-size: 1.1em; color: #333; }
+        #data-range, #error-message { font-size: 0.9em; color: #555; }
+        #error-message { color: #d93025; font-weight: bold; }
+
+        .form-group { margin-bottom: 1.5em; }
         label { 
             display: block; 
             margin-bottom: 0.75em; 
@@ -41,7 +59,7 @@
             font-size: 0.9em;
             color: #555;
         }
-        input[type="date"], textarea { 
+        input, textarea { 
             width: 100%; 
             padding: 12px; 
             box-sizing: border-box; 
@@ -50,15 +68,12 @@
             font-size: 1em;
             transition: border-color 0.3s;
         }
-        input[type="date"]:focus, textarea:focus {
+        input:focus, textarea:focus {
             outline: none;
             border-color: #007bff;
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
         }
-        textarea { 
-            height: 120px; 
-            resize: vertical; 
-        }
+        textarea { height: 120px; resize: vertical; }
         button { 
             display: block; 
             width: 100%; 
@@ -70,17 +85,32 @@
             cursor: pointer; 
             font-size: 1.1em; 
             font-weight: bold; 
-            transition: background-color 0.3s;
+            transition: all 0.3s;
         }
-        button:hover { 
-            background-color: #0056b3; 
-        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>株価データ CSVダウンローダー</h1>
+        <!-- ヘッダーとプラン表示エリア -->
+        <div id="header-area">
+            <h1>株価データ CSVダウンローダー</h1>
+            <div id="plan-display">
+                <!-- ここにプラン情報が動的に挿入される -->
+                <span id="plan-name"></span>
+                <span id="data-range"></span>
+                <span id="error-message"></span>
+            </div>
+        </div>
+
         <form action="/download" method="post">
+            <!-- トークン入力欄を追加 -->
+            <div class="form-group">
+                <label for="token">認証トークン</label>
+                <input type="text" id="token" name="token" required placeholder="購入した認証トークンを入力してください">
+            </div>
+
             <div class="form-group">
                 <label for="tickers">証券コード (複数指定可: カンマ、スペース、改行で区切る)</label>
                 <textarea id="tickers" name="tickers" placeholder="例:&#10;7203&#10;9984, 7974"></textarea>
@@ -93,8 +123,83 @@
                 <label for="end_date">終了日 (任意)</label>
                 <input type="date" id="end_date" name="end_date">
             </div>
-            <button type="submit">CSVをダウンロード</button>
+            <!-- disabled 属性を初期状態で追加 -->
+            <button type="submit" id="download-btn" disabled>CSVをダウンロード</button>
         </form>
     </div>
+
+    <script>
+        // DOM要素を取得
+        const tokenInput = document.getElementById('token');
+        const planDisplay = document.getElementById('plan-display');
+        const planNameEl = document.getElementById('plan-name');
+        const dataRangeEl = document.getElementById('data-range');
+        const errorMessageEl = document.getElementById('error-message');
+        const downloadBtn = document.getElementById('download-btn');
+
+        // トークン入力欄からフォーカスが外れた時に関数を実行
+        tokenInput.addEventListener('blur', validateToken);
+        
+        // ページ読み込み時にlocalStorageからトークンを読み込む
+        window.addEventListener('load', () => {
+            const savedToken = localStorage.getItem('stockdata_token');
+            if (savedToken) {
+                tokenInput.value = savedToken;
+                validateToken();
+            } else {
+                 planNameEl.textContent = 'トークンを入力して認証してください';
+            }
+        });
+
+        async function validateToken() {
+            const token = tokenInput.value.trim();
+            
+            // 入力が空なら初期状態に戻す
+            if (!token) {
+                resetPlanDisplay();
+                return;
+            }
+
+            try {
+                // バックエンドのAPIに問い合わせ
+                const response = await fetch(`/plan_info?token=${token}`);
+                const data = await response.json();
+
+                // レスポンスに応じて表示を更新
+                if (response.ok && data.status === 'success') {
+                    planDisplay.className = 'success';
+                    planNameEl.textContent = `プラン: ${data.plan_name}`;
+                    dataRangeEl.textContent = `データ期間: ${data.data_range}`;
+                    errorMessageEl.textContent = '';
+                    downloadBtn.disabled = false; // ボタンを有効化
+                    // 認証成功したらトークンをブラウザに保存
+                    localStorage.setItem('stockdata_token', token);
+                } else {
+                    planDisplay.className = 'error';
+                    errorMessageEl.textContent = data.message || '認証に失敗しました。';
+                    planNameEl.textContent = '';
+                    dataRangeEl.textContent = '';
+                    downloadBtn.disabled = true; // ボタンを無効化
+                    localStorage.removeItem('stockdata_token');
+                }
+            } catch (error) {
+                // ネットワークエラーなど
+                planDisplay.className = 'error';
+                errorMessageEl.textContent = 'サーバーとの通信に失敗しました。';
+                planNameEl.textContent = '';
+                dataRangeEl.textContent = '';
+                downloadBtn.disabled = true;
+                localStorage.removeItem('stockdata_token');
+            }
+        }
+
+        function resetPlanDisplay() {
+            planDisplay.className = '';
+            planNameEl.textContent = 'トークンを入力して認証してください';
+            dataRangeEl.textContent = '';
+            errorMessageEl.textContent = '';
+            downloadBtn.disabled = true;
+        }
+    </script>
 </body>
 </html>

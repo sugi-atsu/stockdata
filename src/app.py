@@ -1,34 +1,91 @@
-# app.py
-# FINAL_ATTEMPT - THIS IS THE ABSOLUTELY CLEAN VERSION
+# src/app.py (改修後の完全版)
 
 import os
-from flask import Flask, render_template, request, Response, stream_with_context
-from sqlalchemy import create_engine, text
-# import pandas as pd # pandasはもう使わない
+from flask import Flask, render_template, request, Response, stream_with_context, jsonify
+from sqlalchemy import create_engine, text, select
+from sqlalchemy.orm import sessionmaker
 from io import StringIO
-import csv # 標準のcsvライブラリを使う
+import csv
 import config
+
+# create_table.py から MetaData クラスをインポートしてテーブル定義を再利用する
+from scripts.create_table import MetaData
 
 app = Flask(__name__)
 
+def validate_token(token_str):
+    """
+    提供されたトークンを検証し、プラン情報を返します。
+    戻り値: (プランタイプ, テーブル名) or (None, None)
+    """
+    if not token_str:
+        return None, None
+
+    engine = create_engine(config.DATABASE_URL)
+    metadata = MetaData()
+    metadata.reflect(bind=engine)
+    tokens_table = metadata.tables['tokens']
+
+    with engine.connect() as connection:
+        stmt = select(tokens_table.c.plan_type).where(
+            tokens_table.c.token == token_str,
+            tokens_table.c.is_active == True
+        )
+        result = connection.execute(stmt).scalar_one_or_none()
+
+    if result == 'bulk':
+        return 'bulk', config.TABLE_NAME_FIXED
+    elif result == 'subscription':
+        return 'subscription', config.TABLE_NAME
+    else:
+        return None, None
+
 @app.route('/')
 def index():
+    """メインページを表示します。"""
     return render_template('index.html')
+
+@app.route('/plan_info', methods=['GET'])
+def get_plan_info():
+    """トークンに基づいてプラン情報を返します。"""
+    token = request.args.get('token')
+    plan_type, table_name = validate_token(token)
+
+    if plan_type == 'bulk':
+        return jsonify({
+            "status": "success",
+            "plan_name": "買い切りプラン",
+            "data_range": "2015-01-01 から 2025-12-31 まで (固定)"
+        })
+    elif plan_type == 'subscription':
+        return jsonify({
+            "status": "success",
+            "plan_name": "サブスクリプションプラン",
+            "data_range": "2015-01-01 から 本日まで (毎日更新)"
+        })
+    else:
+        return jsonify({
+            "status": "error",
+            "message": "無効なトークンです。"
+        }), 401 # 401 Unauthorized
 
 @app.route('/download', methods=['POST'])
 def download():
-    print("Creating database engine...")
-    try:
-        engine = create_engine(config.DATABASE_URL)
-    except Exception as e:
-        print(f"Failed to create database engine: {e}")
-        return "Database engine creation failed.", 500
+    """トークンを検証し、株価データをCSVとしてストリーミングダウンロードします。"""
+    token = request.form.get('token')
     
+    # トークンを検証し、使用するテーブル名を取得
+    plan_type, table_name = validate_token(token)
+    if not plan_type:
+        return "Error: Invalid or inactive token.", 401 # 401 Unauthorized
+
+    # フォームから他のパラメータを取得
     tickers_str = request.form.get('tickers')
     start_date = request.form.get('start_date')
     end_date = request.form.get('end_date')
 
-    base_query = f'SELECT * FROM public."{config.TABLE_NAME}" WHERE 1=1'
+    # SQLクエリの構築
+    base_query = f'SELECT * FROM public."{table_name}" WHERE 1=1'
     params = {}
 
     if tickers_str:
@@ -47,10 +104,11 @@ def download():
         
     base_query += ' ORDER BY "証券コード", "日付"'
 
+    engine = create_engine(config.DATABASE_URL)
+
     def generate_csv():
         try:
             with engine.connect() as connection:
-                print("Successfully connected. Executing stream query.")
                 # サーバーサイドカーソルを使ってメモリ効率の良いクエリを実行
                 stream_result = connection.execution_options(stream_results=True).execute(text(base_query), params)
                 
@@ -69,11 +127,7 @@ def download():
                     yield output.getvalue()
                     output.seek(0)
                     output.truncate(0)
-                
-                print("Stream query finished.")
-
         except Exception as e:
-            print(f"An error occurred during CSV generation: {e}")
             # エラー発生時もジェネレータを終了させる
             yield f"Error: {e}"
             return
@@ -84,4 +138,5 @@ def download():
     return response
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)), debug=True)
+    # この部分はローカルでの直接実行用。Gunicornからは使われない。
+    app.run(host='0.0.0.0', port=5000, debug=True)
