@@ -40,6 +40,11 @@ def validate_token(token_str):
     else:
         return None, None
 
+@app.route('/')
+def index():
+    """メインページを表示します。"""
+    return render_template('index.html')
+
 @app.route('/plan_info', methods=['GET'])
 def get_plan_info():
     """トークンに基づいてプラン情報を返します。"""
@@ -47,7 +52,6 @@ def get_plan_info():
     plan_type, table_name = validate_token(token)
 
     if plan_type == 'bulk':
-        # ▼▼▼【ここからが変更点】▼▼▼
         engine = create_engine(config.DATABASE_URL)
         data_range_str = "データ未投入です (固定)" # デフォルト値
         try:
@@ -68,7 +72,6 @@ def get_plan_info():
             "plan_name": "買い切りプラン",
             "data_range": data_range_str # 動的に生成した文字列を使用
         })
-        # ▲▲▲【ここまでが変更点】▲▲▲
     elif plan_type == 'subscription':
         return jsonify({
             "status": "success",
@@ -86,14 +89,17 @@ def download():
     """トークンを検証し、株価データをCSVとしてストリーミングダウンロードします。"""
     token = request.form.get('token')
     
+    # トークンを検証し、使用するテーブル名を取得
     plan_type, table_name = validate_token(token)
     if not plan_type:
-        return "Error: Invalid or inactive token.", 401
+        return "Error: Invalid or inactive token.", 401 # 401 Unauthorized
 
+    # フォームから他のパラメータを取得
     tickers_str = request.form.get('tickers')
     start_date = request.form.get('start_date')
     end_date = request.form.get('end_date')
 
+    # SQLクエリの構築
     base_query = f'SELECT * FROM public."{table_name}" WHERE 1=1'
     params = {}
 
@@ -118,8 +124,10 @@ def download():
     def generate_csv():
         try:
             with engine.connect() as connection:
+                # サーバーサイドカーソルを使ってメモリ効率の良いクエリを実行
                 stream_result = connection.execution_options(stream_results=True).execute(text(base_query), params)
                 
+                # ヘッダー行を書き出す
                 header = stream_result.keys()
                 output = StringIO()
                 writer = csv.writer(output)
@@ -128,18 +136,22 @@ def download():
                 output.seek(0)
                 output.truncate(0)
 
+                # データ行を少しずつ書き出す
                 for row in stream_result:
                     writer.writerow(row)
                     yield output.getvalue()
                     output.seek(0)
                     output.truncate(0)
         except Exception as e:
+            # エラー発生時もジェネレータを終了させる
             yield f"Error: {e}"
             return
 
+    # ストリーミングレスポンスを返す
     response = Response(stream_with_context(generate_csv()), mimetype='text/csv')
     response.headers['Content-Disposition'] = 'attachment; filename=stock_data.csv'
     return response
 
 if __name__ == '__main__':
+    # この部分はローカルでの直接実行用。Gunicornからは使われない。
     app.run(host='0.0.0.0', port=5000, debug=True)
