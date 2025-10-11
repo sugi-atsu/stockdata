@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- タイトル部分も動的に変更するため、一旦汎用的にしておく -->
     <title>株価データ ダウンローダー</title>
     <style>
         body { 
@@ -26,19 +25,18 @@
             background-color: #fff; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
         }
-        /* h1とプラン表示エリアのスタイル */
         #header-area h1 {
             text-align: center;
             color: #2c3e50;
             font-size: 1.8em;
-            margin-bottom: 0.25em; /* h1の下マージンを減らす */
+            margin-bottom: 0.25em;
         }
         #plan-display {
             text-align: center;
             margin-bottom: 1.5em;
             padding: 0.5em;
             border-radius: 6px;
-            min-height: 50px; /* 高さを確保してレイアウト崩れを防ぐ */
+            min-height: 50px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -93,19 +91,16 @@
 </head>
 <body>
     <div class="container">
-        <!-- ヘッダーとプラン表示エリア -->
         <div id="header-area">
             <h1>株価データ CSVダウンローダー</h1>
             <div id="plan-display">
-                <!-- ここにプラン情報が動的に挿入される -->
                 <span id="plan-name"></span>
                 <span id="data-range"></span>
                 <span id="error-message"></span>
             </div>
         </div>
 
-        <form action="/download" method="post">
-            <!-- トークン入力欄を追加 -->
+        <form action="/download" method="post" id="download-form">
             <div class="form-group">
                 <label for="token">認証トークン</label>
                 <input type="text" id="token" name="token" required placeholder="購入した認証トークンを入力してください">
@@ -123,24 +118,25 @@
                 <label for="end_date">終了日 (任意)</label>
                 <input type="date" id="end_date" name="end_date">
             </div>
-            <!-- disabled 属性を初期状態で追加 -->
             <button type="submit" id="download-btn" disabled>CSVをダウンロード</button>
         </form>
     </div>
 
     <script>
-        // DOM要素を取得
         const tokenInput = document.getElementById('token');
         const planDisplay = document.getElementById('plan-display');
         const planNameEl = document.getElementById('plan-name');
         const dataRangeEl = document.getElementById('data-range');
         const errorMessageEl = document.getElementById('error-message');
         const downloadBtn = document.getElementById('download-btn');
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        const downloadForm = document.getElementById('download-form');
 
-        // トークン入力欄からフォーカスが外れた時に関数を実行
+        let currentPlanInfo = {}; // 現在のプラン情報を保持するグローバル変数
+
         tokenInput.addEventListener('blur', validateToken);
         
-        // ページ読み込み時にlocalStorageからトークンを読み込む
         window.addEventListener('load', () => {
             const savedToken = localStorage.getItem('stockdata_token');
             if (savedToken) {
@@ -150,11 +146,39 @@
                  planNameEl.textContent = 'トークンを入力して認証してください';
             }
         });
+        
+        // フォームが送信される直前の最終チェック
+        downloadForm.addEventListener('submit', function(event) {
+            // 買い切りプランの場合のみチェックを実行
+            if (currentPlanInfo.plan_name === '買い切りプラン') {
+                const startDate = startDateInput.value;
+                const endDate = endDateInput.value;
+                const minDate = currentPlanInfo.min_date;
+                const maxDate = currentPlanInfo.max_date;
+
+                let isValid = true;
+                let errorMessage = '';
+
+                // 手入力などでカレンダーの制限を回避した場合のチェック
+                if (startDate && startDate < minDate) {
+                    isValid = false;
+                    errorMessage = `開始日は ${minDate} 以降にしてください。`;
+                } else if (endDate && endDate > maxDate) {
+                    isValid = false;
+                    errorMessage = `終了日は ${maxDate} 以前にしてください。`;
+                }
+                
+                if (!isValid) {
+                    event.preventDefault(); // フォームの送信を中止
+                    errorMessageEl.textContent = errorMessage;
+                    planDisplay.className = 'error';
+                }
+            }
+        });
 
         async function validateToken() {
             const token = tokenInput.value.trim();
             
-            // 入力が空なら初期状態に戻す
             if (!token) {
                 resetPlanDisplay();
                 return;
@@ -165,40 +189,53 @@
                 const response = await fetch(`/plan_info?token=${token}`);
                 const data = await response.json();
 
-                // レスポンスに応じて表示を更新
                 if (response.ok && data.status === 'success') {
+                    currentPlanInfo = data; // プラン情報をグローバル変数に保存
                     planDisplay.className = 'success';
                     planNameEl.textContent = `プラン: ${data.plan_name}`;
                     dataRangeEl.textContent = `データ期間: ${data.data_range}`;
                     errorMessageEl.textContent = '';
-                    downloadBtn.disabled = false; // ボタンを有効化
-                    // 認証成功したらトークンをブラウザに保存
+                    downloadBtn.disabled = false;
                     localStorage.setItem('stockdata_token', token);
+
+                    // プランに応じて日付入力の制限を動的に設定
+                    if (data.plan_name === '買い切りプラン') {
+                        startDateInput.min = data.min_date;
+                        startDateInput.max = data.max_date;
+                        endDateInput.min = data.min_date;
+                        endDateInput.max = data.max_date;
+                    } else {
+                        resetDateInputs(); // サブスクプランの場合は制限を解除
+                    }
                 } else {
-                    planDisplay.className = 'error';
-                    errorMessageEl.textContent = data.message || '認証に失敗しました。';
-                    planNameEl.textContent = '';
-                    dataRangeEl.textContent = '';
-                    downloadBtn.disabled = true; // ボタンを無効化
-                    localStorage.removeItem('stockdata_token');
+                    handleAuthError(data.message || '認証に失敗しました。');
                 }
             } catch (error) {
-                // ネットワークエラーなど
-                planDisplay.className = 'error';
-                errorMessageEl.textContent = 'サーバーとの通信に失敗しました。';
-                planNameEl.textContent = '';
-                dataRangeEl.textContent = '';
-                downloadBtn.disabled = true;
-                localStorage.removeItem('stockdata_token');
+                handleAuthError('サーバーとの通信に失敗しました。');
             }
+        }
+        
+        function handleAuthError(message) {
+            currentPlanInfo = {}; // グローバル変数もリセット
+            planDisplay.className = 'error';
+            errorMessageEl.textContent = message;
+            planNameEl.textContent = '';
+            dataRangeEl.textContent = '';
+            downloadBtn.disabled = true;
+            localStorage.removeItem('stockdata_token');
+            resetDateInputs();
         }
 
         function resetPlanDisplay() {
-            planDisplay.className = '';
+            handleAuthError('');
             planNameEl.textContent = 'トークンを入力して認証してください';
-            dataRangeEl.textContent = '';
-            errorMessageEl.textContent = '';
-            downloadBtn.disabled = true;
+        }
+
+        function resetDateInputs() {
+            startDateInput.min = '';
+            startDateInput.max = '';
+            endDateInput.min = '';
+            endDateInput.max = '';
         }
     </script>
 </body>
