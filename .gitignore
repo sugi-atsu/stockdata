@@ -21,4 +21,4 @@ gcp-key.json
 
 # Data files
 # The 'data' directory is excluded from version control.
-data/
+data/stockdata_copy.sql
