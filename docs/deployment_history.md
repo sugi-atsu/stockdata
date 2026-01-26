@@ -92,4 +92,6 @@ curl http://localhost:8001
 - **お試し用ページ (`/trial`)**: 
     - 従来の入力補助機能（トークンコピー、銘柄選択ボタン）を維持。
     - タイトルを「無料体験版」に変更し、初心者向けのUIを提供。
-- **実装の詳細**: `src/app.py` に `/trial` ルートを追加。テンプレートを `index.html` と `trial.html` に分割。
+- **実装の詳細**: `src/app.py` に `/trial` ルートを追加。テンプレートを `index.html` と `trial.html` に分割。本番環境へデプロイ完了。
+    - **本番URL**: `https://stockdata.marketing-hack.net/`
+    - **体験用URL**: `https://stockdata.marketing-hack.net/trial` (注: `//trial` でもアクセス可能)
