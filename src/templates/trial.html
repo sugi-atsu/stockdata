@@ -219,6 +219,30 @@
                 <textarea id="tickers" name="tickers" placeholder="例:&#10;7203&#10;9984, 7974"></textarea>
             </div>
             <div class="form-group">
+                <label for="date_range_selector">期間をクイック選択</label>
+                <select id="date_range_selector" class="form-control"
+                    style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1em; margin-bottom: 10px;">
+                    <option value="">-- 選択してください --</option>
+                    <option value="today">今日</option>
+                    <option value="yesterday">昨日</option>
+                    <option value="1month">過去1ヶ月</option>
+                    <option value="1year">過去1年</option>
+                    <optgroup label="カスタム">
+                        <option value="Xdays">過去X日</option>
+                        <option value="Xweeks">過去X週間</option>
+                        <option value="Xmonths">過去X月</option>
+                        <option value="Xyears">過去X年</option>
+                    </optgroup>
+                </select>
+                <div id="custom_range_input" style="display: none; margin-bottom: 15px;">
+                    <input type="number" id="range_value" placeholder="数値を入力"
+                        style="width: 70%; display: inline-block;">
+                    <button type="button" id="apply_range" class="tag-btn"
+                        style="width: 25%; height: 45px; vertical-align: top;">適用</button>
+                </div>
+            </div>
+
+            <div class="form-group">
                 <label for="start_date">開始日 (任意)</label>
                 <input type="date" id="start_date" name="start_date">
             </div>
@@ -364,6 +388,64 @@
             startDateInput.max = '';
             endDateInput.min = '';
             endDateInput.max = '';
+        }
+
+        // 期間クイック選択のロジック
+        const rangeSelector = document.getElementById('date_range_selector');
+        const customRangeDiv = document.getElementById('custom_range_input');
+        const rangeValueInput = document.getElementById('range_value');
+        const applyRangeBtn = document.getElementById('apply_range');
+
+        rangeSelector.addEventListener('change', () => {
+            const val = rangeSelector.value;
+            if (['Xdays', 'Xweeks', 'Xmonths', 'Xyears'].includes(val)) {
+                customRangeDiv.style.display = 'block';
+            } else {
+                customRangeDiv.style.display = 'none';
+                applyQuickRange(val);
+            }
+        });
+
+        applyRangeBtn.addEventListener('click', () => {
+            applyQuickRange(rangeSelector.value, rangeValueInput.value);
+        });
+
+        function applyQuickRange(type, amount) {
+            const today = new Date();
+            let start = new Date();
+            let end = new Date();
+
+            switch (type) {
+                case 'today':
+                    break;
+                case 'yesterday':
+                    start.setDate(today.getDate() - 1);
+                    end.setDate(today.getDate() - 1);
+                    break;
+                case '1month':
+                    start.setMonth(today.getMonth() - 1);
+                    break;
+                case '1year':
+                    start.setFullYear(today.getFullYear() - 1);
+                    break;
+                case 'Xdays':
+                    start.setDate(today.getDate() - parseInt(amount));
+                    break;
+                case 'Xweeks':
+                    start.setDate(today.getDate() - (parseInt(amount) * 7));
+                    break;
+                case 'Xmonths':
+                    start.setMonth(today.getMonth() - parseInt(amount));
+                    break;
+                case 'Xyears':
+                    start.setFullYear(today.getFullYear() - parseInt(amount));
+                    break;
+                default:
+                    return;
+            }
+
+            startDateInput.value = start.toISOString().split('T')[0];
+            endDateInput.value = end.toISOString().split('T')[0];
         }
     </script>
 </body>
