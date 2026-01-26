@@ -139,16 +139,6 @@
     <div class="container">
         <div id="header-area">
             <h1>株価データ CSVダウンローダー</h1>
-            <div style="text-align: center; margin-bottom: 1em;">
-                <span id="env-badge" style="
-                    display: inline-block;
-                    padding: 4px 12px;
-                    border-radius: 20px;
-                    font-size: 0.8em;
-                    font-weight: bold;
-                    text-transform: uppercase;
-                ">{{ env_name }}</span>
-            </div>
             <div id="plan-display">
                 <span id="plan-name"></span>
                 <span id="data-range"></span>
@@ -190,20 +180,6 @@
         const downloadForm = document.getElementById('download-form');
 
         let currentPlanInfo = {}; // 現在のプラン情報を保持するグローバル変数
-
-        // 環境バッジの色設定
-        const envBadge = document.getElementById('env-badge');
-        const envName = "{{ env_name }}";
-        if (envName.toLowerCase().includes('vps')) {
-            envBadge.style.backgroundColor = '#f5222d'; // 赤 (本番/VPS)
-            envBadge.style.color = 'white';
-        } else if (envName.toLowerCase().includes('docker')) {
-            envBadge.style.backgroundColor = '#faad14'; // オレンジ (ローカルDocker)
-            envBadge.style.color = 'white';
-        } else {
-            envBadge.style.backgroundColor = '#52c41a'; // 緑 (ローカル開発)
-            envBadge.style.color = 'white';
-        }
 
         tokenInput.addEventListener('blur', validateToken);
 

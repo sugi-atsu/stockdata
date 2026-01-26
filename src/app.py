@@ -51,7 +51,7 @@ def get_bulk_plan_date_range(engine):
 
 @app.route('/')
 def index():
-    return render_template('index.html', env_name=config.ENV_NAME)
+    return render_template('index.html')
 
 @app.route('/plan_info', methods=['GET'])
 def get_plan_info():
