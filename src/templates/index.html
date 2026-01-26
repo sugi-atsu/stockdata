@@ -4,221 +4,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>株価データ ダウンローダー | Purchaser Portal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>株価データ ダウンローダー</title>
     <style>
-        :root {
-            --primary-color: #2563eb;
-            --primary-hover: #1d4ed8;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-            --success-bg: #f0fdf4;
-            --success-border: #bbf7d0;
-            --success-text: #166534;
-            --error-bg: #fef2f2;
-            --error-border: #fecaca;
-            --error-text: #991b1b;
-        }
-
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            margin: 0;
-            background-color: var(--bg-color);
-            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 2em;
+            background-color: #f4f7f6;
+            color: #333;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            min-height: 90vh;
         }
 
         .container {
             width: 100%;
-            max-width: 550px;
-            margin: 20px;
-            padding: 40px;
-            border-radius: 24px;
-            background-color: var(--card-bg);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-        }
-
-        #header-area {
-            text-align: center;
-            margin-bottom: 32px;
+            max-width: 600px;
+            margin: auto;
+            padding: 2em;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
         #header-area h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--text-main);
-            margin: 0 0 8px 0;
-            letter-spacing: -0.025em;
-        }
-
-        #header-area p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            margin: 0;
+            text-align: center;
+            color: #2c3e50;
+            font-size: 1.8em;
+            margin-bottom: 0.25em;
         }
 
         #plan-display {
-            margin-bottom: 24px;
-            padding: 16px;
-            border-radius: 12px;
-            min-height: 60px;
+            text-align: center;
+            margin-bottom: 1.5em;
+            padding: 0.5em;
+            border-radius: 6px;
+            min-height: 50px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-size: 0.9rem;
-            border: 1px solid transparent;
-            transition: all 0.2s ease;
+            transition: background-color 0.3s;
         }
 
         #plan-display.success {
-            background-color: var(--success-bg);
-            border-color: var(--success-border);
-            color: var(--success-text);
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
         }
 
         #plan-display.error {
-            background-color: var(--error-bg);
-            border-color: var(--error-border);
-            color: var(--error-text);
+            background-color: #fff1f0;
+            border: 1px solid #ffa39e;
         }
 
         #plan-name {
-            font-weight: 700;
-            font-size: 1rem;
-            margin-bottom: 4px;
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        #data-range,
+        #error-message {
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        #error-message {
+            color: #d93025;
+            font-weight: bold;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 1.5em;
         }
 
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 0.75em;
             font-weight: 600;
-            font-size: 0.875rem;
-            color: var(--text-main);
+            font-size: 0.9em;
+            color: #555;
         }
 
         input,
-        textarea,
-        select {
+        textarea {
             width: 100%;
-            padding: 12px 16px;
+            padding: 12px;
             box-sizing: border-box;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            font-size: 0.95rem;
-            font-family: inherit;
-            color: var(--text-main);
-            background-color: #fff;
-            transition: all 0.2s ease;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
         }
 
         input:focus,
-        textarea:focus,
-        select:focus {
+        textarea:focus {
             outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
         }
 
         textarea {
-            height: 100px;
+            height: 120px;
             resize: vertical;
         }
 
-        .date-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
-        button[type="submit"] {
+        button {
             display: block;
             width: 100%;
-            background-color: var(--primary-color);
+            background-color: #007bff;
             color: white;
-            padding: 16px;
+            padding: 14px 15px;
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            margin-top: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: all 0.3s;
         }
 
-        button[type="submit"]:hover {
-            background-color: var(--primary-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        button:hover {
+            background-color: #0056b3;
         }
 
-        button[type="submit"]:active {
-            transform: translateY(0);
-        }
-
-        button[type="submit"]:disabled {
-            background-color: var(--border-color);
-            color: var(--text-muted);
+        button:disabled {
+            background-color: #cccccc;
             cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .footer-link {
-            text-align: center;
-            margin-top: 24px;
-            font-size: 0.875rem;
-            color: var(--text-muted);
-        }
-
-        .footer-link a {
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .footer-link a:hover {
-            text-decoration: underline;
-        }
-
-        /* 期間クイック選択のスタイル調整 */
-        .quick-select-area {
-            background-color: #f1f5f9;
-            padding: 12px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-        }
-
-        #custom_range_input {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
         }
 
         .tag-btn {
-            background-color: #fff;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.85rem;
+            display: inline-block;
+            width: auto;
+            padding: 4px 10px;
+            font-size: 0.8em;
+            background-color: #f0f0f0;
+            color: #555;
+            border: 1px solid #ccc;
+            border-radius: 4px;
             cursor: pointer;
-            transition: all 0.2s;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-weight: normal;
         }
 
         .tag-btn:hover {
-            background-color: var(--bg-color);
-            border-color: var(--text-muted);
+            background-color: #e0e0e0;
+            border-color: #999;
         }
     </style>
 </head>
@@ -226,62 +158,63 @@
 <body>
     <div class="container">
         <div id="header-area">
-            <h1>株価データ ダウンローダー</h1>
-            <p>高品質な日本株ヒストリカルデータを提供</p>
-        </div>
+            <h1>株価データ CSVダウンローダー</h1>
 
-        <div id="plan-display">
-            <span id="plan-name">認証トークンを入力してください</span>
-            <span id="data-range"></span>
-            <span id="error-message"></span>
+            <div id="plan-display">
+                <span id="plan-name"></span>
+                <span id="data-range"></span>
+                <span id="error-message"></span>
+            </div>
         </div>
 
         <form action="/download" method="post" id="download-form">
             <div class="form-group">
                 <label for="token">認証トークン</label>
-                <input type="text" id="token" name="token" required placeholder="例: 1234abcd...">
+                <input type="text" id="token" name="token" required placeholder="購入した認証トークンを入力してください">
             </div>
 
             <div class="form-group">
-                <label for="tickers">証券コード (複数指定可)</label>
-                <textarea id="tickers" name="tickers" placeholder="例: 7203, 9984, 7974..."></textarea>
-            </div>
+                <label for="tickers">証券コード (複数指定可: カンマ、スペース、改行で区切る)</label>
 
-            <div class="quick-select-area">
+                <textarea id="tickers" name="tickers" placeholder="例:&#10;7203&#10;9984, 7974"></textarea>
+            </div>
+            <div class="form-group">
                 <label for="date_range_selector">期間をクイック選択</label>
-                <select id="date_range_selector">
-                    <option value="">-- 指定なし --</option>
+                <select id="date_range_selector" class="form-control"
+                    style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1em; margin-bottom: 10px;">
+                    <option value="">-- 選択してください --</option>
                     <option value="today">今日</option>
                     <option value="yesterday">昨日</option>
                     <option value="1month">過去1ヶ月</option>
                     <option value="1year">過去1年</option>
-                    <optgroup label="その他">
+                    <optgroup label="カスタム">
                         <option value="Xdays">過去X日</option>
                         <option value="Xweeks">過去X週間</option>
+                        <option value="Xmonths">過去X月</option>
+                        <option value="Xyears">過去X年</option>
                     </optgroup>
                 </select>
-                <div id="custom_range_input" style="display: none;">
-                    <input type="number" id="range_value" placeholder="件数" style="flex: 1;">
-                    <button type="button" id="apply_range" class="tag-btn">適用</button>
+                <div id="custom_range_input" style="display: none; margin-bottom: 15px;">
+                    <input type="number" id="range_value" placeholder="数値を入力"
+                        style="width: 70%; display: inline-block;">
+                    <button type="button" id="apply_range" class="tag-btn"
+                        style="width: 25%; height: 45px; vertical-align: top;">適用</button>
                 </div>
             </div>
 
-            <div class="date-row">
-                <div class="form-group">
-                    <label for="start_date">開始日</label>
-                    <input type="date" id="start_date" name="start_date">
-                </div>
-                <div class="form-group">
-                    <label for="end_date">終了日</label>
-                    <input type="date" id="end_date" name="end_date">
-                </div>
+            <div class="form-group">
+                <label for="start_date">開始日 (任意)</label>
+                <input type="date" id="start_date" name="start_date">
             </div>
-
+            <div class="form-group">
+                <label for="end_date">終了日 (任意)</label>
+                <input type="date" id="end_date" name="end_date">
+            </div>
             <button type="submit" id="download-btn" disabled>CSVをダウンロード</button>
         </form>
-
-        <div class="footer-link">
-            まだトークンをお持ちでないですか？ <br>
+        <!-- ページ分離後の追加：体験版へのリンク -->
+        <div style="text-align: center; margin-top: 20px; font-size: 0.9em;">
+            まだトークンをお持ちでない方はこちら：<br>
             <a href="/trial">無料体験版（2025/1/1〜1/7）を試す</a>
         </div>
     </div>
@@ -296,8 +229,11 @@
         const startDateInput = document.getElementById('start_date');
         const endDateInput = document.getElementById('end_date');
         const downloadForm = document.getElementById('download-form');
+        const tickersTextarea = document.getElementById('tickers');
 
-        let currentPlanInfo = {};
+        let currentPlanInfo = {}; // 現在のプラン情報を保持するグローバル変数
+
+
 
         tokenInput.addEventListener('blur', validateToken);
 
@@ -306,10 +242,14 @@
             if (savedToken) {
                 tokenInput.value = savedToken;
                 validateToken();
+            } else {
+                planNameEl.textContent = '購入者向けの認証トークンを入力してください';
             }
         });
 
+        // フォームが送信される直前の最終チェック
         downloadForm.addEventListener('submit', function (event) {
+            // 買い切りプランや体験プランの場合のみチェックを実行
             if (currentPlanInfo.plan_name === '買い切りプラン' || currentPlanInfo.plan_name === '無料体験プラン') {
                 const startDate = startDateInput.value;
                 const endDate = endDateInput.value;
@@ -319,6 +259,7 @@
                 let isValid = true;
                 let errorMessage = '';
 
+                // 手入力などでカレンダーの制限を回避した場合のチェック
                 if (startDate && startDate < minDate) {
                     isValid = false;
                     errorMessage = `開始日は ${minDate} 以降にしてください。`;
@@ -328,7 +269,7 @@
                 }
 
                 if (!isValid) {
-                    event.preventDefault();
+                    event.preventDefault(); // フォームの送信を中止
                     errorMessageEl.textContent = errorMessage;
                     planDisplay.className = 'error';
                 }
@@ -337,17 +278,19 @@
 
         async function validateToken() {
             const token = tokenInput.value.trim();
+
             if (!token) {
                 resetPlanDisplay();
                 return;
             }
 
             try {
+                // バックエンドのAPIに問い合わせ
                 const response = await fetch(`/plan_info?token=${token}`);
                 const data = await response.json();
 
                 if (response.ok && data.status === 'success') {
-                    currentPlanInfo = data;
+                    currentPlanInfo = data; // プラン情報をグローバル変数に保存
                     planDisplay.className = 'success';
                     planNameEl.textContent = `プラン: ${data.plan_name}`;
                     dataRangeEl.textContent = `データ期間: ${data.data_range}`;
@@ -355,13 +298,14 @@
                     downloadBtn.disabled = false;
                     localStorage.setItem('stockdata_token', token);
 
+                    // プランに応じて日付入力の制限を動的に設定
                     if (data.plan_name === '買い切りプラン' || data.plan_name === '無料体験プラン') {
                         startDateInput.min = data.min_date;
                         startDateInput.max = data.max_date;
                         endDateInput.min = data.min_date;
                         endDateInput.max = data.max_date;
                     } else {
-                        resetDateInputs();
+                        resetDateInputs(); // サブスクプランの場合は制限を解除
                     }
                 } else {
                     handleAuthError(data.message || '認証に失敗しました。');
@@ -372,10 +316,10 @@
         }
 
         function handleAuthError(message) {
-            currentPlanInfo = {};
+            currentPlanInfo = {}; // グローバル変数もリセット
             planDisplay.className = 'error';
             errorMessageEl.textContent = message;
-            planNameEl.textContent = '認証エラー';
+            planNameEl.textContent = '';
             dataRangeEl.textContent = '';
             downloadBtn.disabled = true;
             localStorage.removeItem('stockdata_token');
@@ -383,11 +327,8 @@
         }
 
         function resetPlanDisplay() {
-            planDisplay.className = '';
-            planNameEl.textContent = '認証トークンを入力してください';
-            dataRangeEl.textContent = '';
-            errorMessageEl.textContent = '';
-            downloadBtn.disabled = true;
+            handleAuthError('');
+            planNameEl.textContent = '購入者向けの認証トークンを入力してください';
         }
 
         function resetDateInputs() {
@@ -397,6 +338,7 @@
             endDateInput.max = '';
         }
 
+        // 期間クイック選択のロジック
         const rangeSelector = document.getElementById('date_range_selector');
         const customRangeDiv = document.getElementById('custom_range_input');
         const rangeValueInput = document.getElementById('range_value');
@@ -404,8 +346,8 @@
 
         rangeSelector.addEventListener('change', () => {
             const val = rangeSelector.value;
-            if (['Xdays', 'Xweeks'].includes(val)) {
-                customRangeDiv.style.display = 'flex';
+            if (['Xdays', 'Xweeks', 'Xmonths', 'Xyears'].includes(val)) {
+                customRangeDiv.style.display = 'block';
             } else {
                 customRangeDiv.style.display = 'none';
                 applyQuickRange(val);
@@ -422,16 +364,32 @@
             let end = new Date();
 
             switch (type) {
-                case 'today': break;
+                case 'today':
+                    break;
                 case 'yesterday':
                     start.setDate(today.getDate() - 1);
                     end.setDate(today.getDate() - 1);
                     break;
-                case '1month': start.setMonth(today.getMonth() - 1); break;
-                case '1year': start.setFullYear(today.getFullYear() - 1); break;
-                case 'Xdays': start.setDate(today.getDate() - parseInt(amount)); break;
-                case 'Xweeks': start.setDate(today.getDate() - (parseInt(amount) * 7)); break;
-                default: return;
+                case '1month':
+                    start.setMonth(today.getMonth() - 1);
+                    break;
+                case '1year':
+                    start.setFullYear(today.getFullYear() - 1);
+                    break;
+                case 'Xdays':
+                    start.setDate(today.getDate() - parseInt(amount));
+                    break;
+                case 'Xweeks':
+                    start.setDate(today.getDate() - (parseInt(amount) * 7));
+                    break;
+                case 'Xmonths':
+                    start.setMonth(today.getMonth() - parseInt(amount));
+                    break;
+                case 'Xyears':
+                    start.setFullYear(today.getFullYear() - parseInt(amount));
+                    break;
+                default:
+                    return;
             }
 
             startDateInput.value = start.toISOString().split('T')[0];
