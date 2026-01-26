@@ -34,6 +34,8 @@ def validate_token(token_str):
         return 'bulk', config.TABLE_NAME_FIXED
     elif result == 'subscription':
         return 'subscription', config.TABLE_NAME
+    elif result == 'trial':
+        return 'trial', config.TABLE_NAME
     else:
         return None, None
 
@@ -80,6 +82,14 @@ def get_plan_info():
             "plan_name": "サブスクリプションプラン",
             "data_range": "2015-01-01 から 本日まで (毎日更新)"
         })
+    elif plan_type == 'trial':
+        return jsonify({
+            "status": "success",
+            "plan_name": "無料体験プラン",
+            "data_range": "2025-01-01 から 2025-01-07 まで (お試し期間)",
+            "min_date": "2025-01-01",
+            "max_date": "2025-01-07"
+        })
     else:
         return jsonify({"status": "error", "message": "無効なトークンです。"}), 401
 
@@ -118,6 +128,11 @@ def download():
                     return f"Error: End date must be on or before {max_valid_date}.", 400
             except ValueError:
                 return "Error: Invalid end_date format. Please use YYYY-MM-DD.", 400
+
+    # お試しプランの場合、期間を強制的に 2025-01-01 〜 2025-01-07 に制限する
+    if plan_type == 'trial':
+        start_date_str = "2025-01-01"
+        end_date_str = "2025-01-07"
 
     tickers_str = request.form.get('tickers')
     base_query = f'SELECT * FROM public."{table_name}" WHERE 1=1'

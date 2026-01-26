@@ -90,7 +90,7 @@ def main():
 
     # 'add' コマンドの設定
     parser_add = subparsers.add_parser("add", help="Add a new token.")
-    parser_add.add_argument("plan_type", choices=['bulk', 'subscription'], help="The plan type for the new token ('bulk' or 'subscription').")
+    parser_add.add_argument("plan_type", choices=['bulk', 'subscription', 'trial'], help="The plan type for the new token ('bulk', 'subscription', or 'trial').")
 
     # 'deactivate' コマンドの設定
     parser_deactivate = subparsers.add_parser("deactivate", help="Deactivate a token.")
