@@ -1,36 +1,40 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>株価データ ダウンローダー</title>
     <style>
-        body { 
+        body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 2em; 
-            background-color: #f4f7f6; 
-            color: #333; 
+            margin: 2em;
+            background-color: #f4f7f6;
+            color: #333;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 90vh;
         }
-        .container { 
+
+        .container {
             width: 100%;
-            max-width: 600px; 
-            margin: auto; 
-            padding: 2em; 
-            border: 1px solid #ddd; 
-            border-radius: 12px; 
-            background-color: #fff; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+            max-width: 600px;
+            margin: auto;
+            padding: 2em;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
+
         #header-area h1 {
             text-align: center;
             color: #2c3e50;
             font-size: 1.8em;
             margin-bottom: 0.25em;
         }
+
         #plan-display {
             text-align: center;
             margin-bottom: 1.5em;
@@ -43,56 +47,108 @@
             align-items: center;
             transition: background-color 0.3s;
         }
-        #plan-display.success { background-color: #e6f7ff; border: 1px solid #91d5ff; }
-        #plan-display.error { background-color: #fff1f0; border: 1px solid #ffa39e; }
-        #plan-name { font-weight: bold; font-size: 1.1em; color: #333; }
-        #data-range, #error-message { font-size: 0.9em; color: #555; }
-        #error-message { color: #d93025; font-weight: bold; }
 
-        .form-group { margin-bottom: 1.5em; }
-        label { 
-            display: block; 
-            margin-bottom: 0.75em; 
+        #plan-display.success {
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
+        }
+
+        #plan-display.error {
+            background-color: #fff1f0;
+            border: 1px solid #ffa39e;
+        }
+
+        #plan-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        #data-range,
+        #error-message {
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        #error-message {
+            color: #d93025;
+            font-weight: bold;
+        }
+
+        .form-group {
+            margin-bottom: 1.5em;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.75em;
             font-weight: 600;
             font-size: 0.9em;
             color: #555;
         }
-        input, textarea { 
-            width: 100%; 
-            padding: 12px; 
-            box-sizing: border-box; 
-            border: 1px solid #ccc; 
-            border-radius: 8px; 
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 8px;
             font-size: 1em;
             transition: border-color 0.3s;
         }
-        input:focus, textarea:focus {
+
+        input:focus,
+        textarea:focus {
             outline: none;
             border-color: #007bff;
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
         }
-        textarea { height: 120px; resize: vertical; }
-        button { 
-            display: block; 
-            width: 100%; 
-            background-color: #007bff; 
-            color: white; 
-            padding: 14px 15px; 
-            border: none; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: 1.1em; 
-            font-weight: bold; 
+
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            background-color: #007bff;
+            color: white;
+            padding: 14px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
             transition: all 0.3s;
         }
-        button:hover { background-color: #0056b3; }
-        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div id="header-area">
             <h1>株価データ CSVダウンローダー</h1>
+            <div style="text-align: center; margin-bottom: 1em;">
+                <span id="env-badge" style="
+                    display: inline-block;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 0.8em;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                ">{{ env_name }}</span>
+            </div>
             <div id="plan-display">
                 <span id="plan-name"></span>
                 <span id="data-range"></span>
@@ -135,20 +191,34 @@
 
         let currentPlanInfo = {}; // 現在のプラン情報を保持するグローバル変数
 
+        // 環境バッジの色設定
+        const envBadge = document.getElementById('env-badge');
+        const envName = "{{ env_name }}";
+        if (envName.toLowerCase().includes('vps')) {
+            envBadge.style.backgroundColor = '#f5222d'; // 赤 (本番/VPS)
+            envBadge.style.color = 'white';
+        } else if (envName.toLowerCase().includes('docker')) {
+            envBadge.style.backgroundColor = '#faad14'; // オレンジ (ローカルDocker)
+            envBadge.style.color = 'white';
+        } else {
+            envBadge.style.backgroundColor = '#52c41a'; // 緑 (ローカル開発)
+            envBadge.style.color = 'white';
+        }
+
         tokenInput.addEventListener('blur', validateToken);
-        
+
         window.addEventListener('load', () => {
             const savedToken = localStorage.getItem('stockdata_token');
             if (savedToken) {
                 tokenInput.value = savedToken;
                 validateToken();
             } else {
-                 planNameEl.textContent = 'トークンを入力して認証してください';
+                planNameEl.textContent = 'トークンを入力して認証してください';
             }
         });
-        
+
         // フォームが送信される直前の最終チェック
-        downloadForm.addEventListener('submit', function(event) {
+        downloadForm.addEventListener('submit', function (event) {
             // 買い切りプランの場合のみチェックを実行
             if (currentPlanInfo.plan_name === '買い切りプラン') {
                 const startDate = startDateInput.value;
@@ -167,7 +237,7 @@
                     isValid = false;
                     errorMessage = `終了日は ${maxDate} 以前にしてください。`;
                 }
-                
+
                 if (!isValid) {
                     event.preventDefault(); // フォームの送信を中止
                     errorMessageEl.textContent = errorMessage;
@@ -178,7 +248,7 @@
 
         async function validateToken() {
             const token = tokenInput.value.trim();
-            
+
             if (!token) {
                 resetPlanDisplay();
                 return;
@@ -214,7 +284,7 @@
                 handleAuthError('サーバーとの通信に失敗しました。');
             }
         }
-        
+
         function handleAuthError(message) {
             currentPlanInfo = {}; // グローバル変数もリセット
             planDisplay.className = 'error';
@@ -239,4 +309,5 @@
         }
     </script>
 </body>
+
 </html>
