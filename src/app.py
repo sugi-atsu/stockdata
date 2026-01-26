@@ -55,6 +55,10 @@ def get_bulk_plan_date_range(engine):
 def index():
     return render_template('index.html')
 
+@app.route('/trial')
+def trial():
+    return render_template('trial.html')
+
 @app.route('/plan_info', methods=['GET'])
 def get_plan_info():
     """トークンに基づいてプラン情報を返す"""

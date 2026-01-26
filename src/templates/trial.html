@@ -158,8 +158,41 @@
 <body>
     <div class="container">
         <div id="header-area">
-            <h1>株価データ CSVダウンローダー</h1>
-
+            <h1>株価データ CSVダウンローダー (無料体験版)</h1>
+            <!-- 無料体験の案内をシンプルに修正 -->
+            <div style="
+                margin-top: 1.5em;
+                margin-bottom: 2em;
+                padding: 15px;
+                border: 2px solid #eee;
+                border-radius: 8px;
+                background-color: #fdfdfd;
+                text-align: center;
+            ">
+                <p style="margin: 0 0 10px 0; font-weight: bold; color: #333; font-size: 1.0em;">🎁 お試しデータ
+                    (2025/1/1〜1/7) 無料公開中</p>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <code id="trial-token" style="
+                        padding: 6px 12px;
+                        background: #f0f0f0;
+                        border-radius: 4px;
+                        font-family: monospace;
+                        font-size: 0.95em;
+                        color: #444;
+                        border: 1px solid #ddd;
+                    ">5c45b5e5a733d7b1d7d4fc1833cc2287</code>
+                    <button type="button" onclick="copyToken()" style="
+                        width: auto;
+                        padding: 6px 15px;
+                        font-size: 0.85em;
+                        background: #666;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                    ">コピーして使う</button>
+                </div>
+            </div>
             <div id="plan-display">
                 <span id="plan-name"></span>
                 <span id="data-range"></span>
@@ -175,7 +208,14 @@
 
             <div class="form-group">
                 <label for="tickers">証券コード (複数指定可: カンマ、スペース、改行で区切る)</label>
-
+                <!-- 銘柄カテゴリのクイック選択を追加 -->
+                <div style="margin-bottom: 10px; font-size: 0.85em; color: #666;">
+                    クリックで入力：
+                    <button type="button" class="tag-btn" onclick="addTickers('7203, 7267, 7201')">トヨタ系</button>
+                    <button type="button" class="tag-btn" onclick="addTickers('9983, 9984, 8035')">主力・指数</button>
+                    <button type="button" class="tag-btn" onclick="addTickers('8951, 8952')">REIT</button>
+                    <button type="button" class="tag-btn" onclick="addTickers('1306, 1321')">ETF</button>
+                </div>
                 <textarea id="tickers" name="tickers" placeholder="例:&#10;7203&#10;9984, 7974"></textarea>
             </div>
             <div class="form-group">
@@ -204,7 +244,24 @@
 
         let currentPlanInfo = {}; // 現在のプラン情報を保持するグローバル変数
 
+        // トークンコピー機能
+        function copyToken() {
+            const tokenText = document.getElementById('trial-token').textContent;
+            navigator.clipboard.writeText(tokenText).then(() => {
+                tokenInput.value = tokenText;
+                validateToken();
+                alert('トークンをコピーして入力欄にセットしました！');
+            });
+        }
 
+        // 銘柄クイック入力機能
+        function addTickers(tickerString) {
+            if (tickersTextarea.value.trim() === '') {
+                tickersTextarea.value = tickerString;
+            } else {
+                tickersTextarea.value += ', ' + tickerString;
+            }
+        }
 
         tokenInput.addEventListener('blur', validateToken);
 
