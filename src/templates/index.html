@@ -132,6 +132,26 @@
             background-color: #cccccc;
             cursor: not-allowed;
         }
+
+        .tag-btn {
+            display: inline-block;
+            width: auto;
+            padding: 4px 10px;
+            font-size: 0.8em;
+            background-color: #f0f0f0;
+            color: #555;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-weight: normal;
+        }
+
+        .tag-btn:hover {
+            background-color: #e0e0e0;
+            border-color: #999;
+        }
     </style>
 </head>
 
@@ -139,31 +159,39 @@
     <div class="container">
         <div id="header-area">
             <h1>株価データ CSVダウンローダー</h1>
-            <!-- 無料体験の案内を追加 -->
+            <!-- 無料体験の案内をシンプルに修正 -->
             <div style="
-                margin-top: 1em;
+                margin-top: 1.5em;
                 margin-bottom: 2em;
                 padding: 15px;
-                border-radius: 10px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
+                border: 2px solid #eee;
+                border-radius: 8px;
+                background-color: #fdfdfd;
                 text-align: center;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             ">
-                <p style="margin: 0 0 8px 0; font-weight: bold; font-size: 1.1em;">🎁 1週間分のお試しデータを無料提供中！</p>
-                <p style="margin: 0; font-size: 0.9em; opacity: 0.9;">
-                    2025/1/1〜1/7の全銘柄データが取得可能です。<br>
-                    以下のトークンをコピーして使ってみてね！
-                </p>
-                <div style="
-                    margin-top: 10px;
-                    padding: 8px;
-                    background: rgba(255,255,255,0.2);
-                    border-radius: 5px;
-                    font-family: monospace;
-                    font-size: 1.1em;
-                    letter-spacing: 1px;
-                ">5c45b5e5a733d7b1d7d4fc1833cc2287</div>
+                <p style="margin: 0 0 10px 0; font-weight: bold; color: #333; font-size: 1.0em;">🎁 お試しデータ
+                    (2025/1/1〜1/7) 無料公開中</p>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <code id="trial-token" style="
+                        padding: 6px 12px;
+                        background: #f0f0f0;
+                        border-radius: 4px;
+                        font-family: monospace;
+                        font-size: 0.95em;
+                        color: #444;
+                        border: 1px solid #ddd;
+                    ">5c45b5e5a733d7b1d7d4fc1833cc2287</code>
+                    <button type="button" onclick="copyToken()" style="
+                        width: auto;
+                        padding: 6px 15px;
+                        font-size: 0.85em;
+                        background: #666;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                    ">コピーして使う</button>
+                </div>
             </div>
             <div id="plan-display">
                 <span id="plan-name"></span>
@@ -180,6 +208,14 @@
 
             <div class="form-group">
                 <label for="tickers">証券コード (複数指定可: カンマ、スペース、改行で区切る)</label>
+                <!-- 銘柄カテゴリのクイック選択を追加 -->
+                <div style="margin-bottom: 10px; font-size: 0.85em; color: #666;">
+                    クリックで入力：
+                    <button type="button" class="tag-btn" onclick="addTickers('7203, 7267, 7201')">トヨタ系</button>
+                    <button type="button" class="tag-btn" onclick="addTickers('9983, 9984, 8035')">主力・指数</button>
+                    <button type="button" class="tag-btn" onclick="addTickers('8951, 8952')">REIT</button>
+                    <button type="button" class="tag-btn" onclick="addTickers('1306, 1321')">ETF</button>
+                </div>
                 <textarea id="tickers" name="tickers" placeholder="例:&#10;7203&#10;9984, 7974"></textarea>
             </div>
             <div class="form-group">
@@ -204,8 +240,28 @@
         const startDateInput = document.getElementById('start_date');
         const endDateInput = document.getElementById('end_date');
         const downloadForm = document.getElementById('download-form');
+        const tickersTextarea = document.getElementById('tickers');
 
         let currentPlanInfo = {}; // 現在のプラン情報を保持するグローバル変数
+
+        // トークンコピー機能
+        function copyToken() {
+            const tokenText = document.getElementById('trial-token').textContent;
+            navigator.clipboard.writeText(tokenText).then(() => {
+                tokenInput.value = tokenText;
+                validateToken();
+                alert('トークンをコピーして入力欄にセットしました！');
+            });
+        }
+
+        // 銘柄クイック入力機能
+        function addTickers(tickerString) {
+            if (tickersTextarea.value.trim() === '') {
+                tickersTextarea.value = tickerString;
+            } else {
+                tickersTextarea.value += ', ' + tickerString;
+            }
+        }
 
         tokenInput.addEventListener('blur', validateToken);
 
@@ -221,8 +277,8 @@
 
         // フォームが送信される直前の最終チェック
         downloadForm.addEventListener('submit', function (event) {
-            // 買い切りプランの場合のみチェックを実行
-            if (currentPlanInfo.plan_name === '買い切りプラン') {
+            // 買い切りプランや体験プランの場合のみチェックを実行
+            if (currentPlanInfo.plan_name === '買い切りプラン' || currentPlanInfo.plan_name === '無料体験プラン') {
                 const startDate = startDateInput.value;
                 const endDate = endDateInput.value;
                 const minDate = currentPlanInfo.min_date;
@@ -271,7 +327,7 @@
                     localStorage.setItem('stockdata_token', token);
 
                     // プランに応じて日付入力の制限を動的に設定
-                    if (data.plan_name === '買い切りプラン') {
+                    if (data.plan_name === '買い切りプラン' || data.plan_name === '無料体験プラン') {
                         startDateInput.min = data.min_date;
                         startDateInput.max = data.max_date;
                         endDateInput.min = data.min_date;
