@@ -235,10 +235,8 @@
                     </optgroup>
                 </select>
                 <div id="custom_range_input" style="display: none; margin-bottom: 15px;">
-                    <input type="number" id="range_value" placeholder="数値を入力"
-                        style="width: 70%; display: inline-block;">
-                    <button type="button" id="apply_range" class="tag-btn"
-                        style="width: 25%; height: 45px; vertical-align: top;">適用</button>
+                    <input type="number" id="range_value" placeholder="数値を入力 (半角数字)"
+                        style="width: 100%; display: inline-block;">
                 </div>
             </div>
 
@@ -410,8 +408,12 @@
             }
         });
 
-        applyRangeBtn.addEventListener('click', () => {
-            applyQuickRange(rangeSelector.value, rangeValueInput.value);
+        rangeValueInput.addEventListener('input', () => {
+            const val = rangeValueInput.value;
+            // 半角数字のみ許可し、空でないことを確認
+            if (/^\d+$/.test(val)) {
+                applyQuickRange(rangeSelector.value, val);
+            }
         });
 
         function applyQuickRange(type, amount) {
