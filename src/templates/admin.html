@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者ポータル | トークン管理</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1,
+        h2 {
+            color: #1a73e8;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background-color: #1a73e8;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #1557b0;
+        }
+
+        .btn-danger {
+            background-color: #d93025;
+            color: white;
+            padding: 5px 10px;
+            font-size: 0.85em;
+        }
+
+        .btn-danger:hover {
+            background-color: #a50e0e;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f8f9fa;
+        }
+
+        .token-cell {
+            font-family: monospace;
+            background: #f1f3f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+
+        .status-active {
+            color: #188038;
+            font-weight: bold;
+        }
+
+        .status-expired {
+            color: #d93025;
+            font-weight: bold;
+        }
+
+        .login-box {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            text-align: center;
+        }
+
+        .error-msg {
+            color: #d93025;
+            margin-bottom: 15px;
+        }
+
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .logout-link {
+            color: #5f6368;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+
+        .logout-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+
+    {% if login_required %}
+    <div class="login-box">
+        <h2>管理者ログイン</h2>
+        {% if error %}
+        <p class="error-msg">{{ error }}</p>
+        {% endif %}
+        <form method="post">
+            <div class="form-group">
+                <input type="password" name="password" placeholder="管理者パスワード" required>
+            </div>
+            <button type="submit" class="btn-primary" style="width: 100%;">ログイン</button>
+        </form>
+    </div>
+    {% else %}
+    <div class="container">
+        <div class="header-flex">
+            <h1>トークン発行・管理</h1>
+            <a href="/admin/logout" class="logout-link">ログアウト</a>
+        </div>
+
+        <section>
+            <h2>新規トークン発行</h2>
+            <form action="/admin/issue" method="post">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label for="user_name">氏名</label>
+                        <input type="text" id="user_name" name="user_name" required placeholder="例: 山田 太郎">
+                    </div>
+                    <div class="form-group">
+                        <label for="user_email">メールアドレス</label>
+                        <input type="email" id="user_email" name="user_email" required
+                            placeholder="例: yamada@example.com">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label for="plan_type">トークン種別</label>
+                        <select id="plan_type" name="plan_type" required>
+                            <option value="subscription">サブスクリプション (毎日更新)</option>
+                            <option value="bulk">買い切り (期間固定)</option>
+                            <option value="trial">無料体験 (2025/1/1-1/7)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="expires_at">自動削除・有効期限 (任意)</label>
+                        <input type="date" id="expires_at" name="expires_at">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">トークンを発行する</button>
+            </form>
+        </section>
+
+        <section>
+            <h2>登録済みトークン一覧</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>氏名 / メール</th>
+                        <th>種別</th>
+                        <th>トークン</th>
+                        <th>期限 / 状態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tokens %}
+                    <tr>
+                        <td>
+                            <strong>{{ t.user_name or 'N/A' }}</strong><br>
+                            <span style="font-size: 0.85em; color: #666;">{{ t.user_email or 'N/A' }}</span>
+                        </td>
+                        <td>{{ t.plan_type }}</td>
+                        <td><span class="token-cell">{{ t.token }}</span></td>
+                        <td>
+                            {% if t.expires_at %}
+                            {{ t.expires_at }}
+                            {% set today = now_date() %}
+                            {% if t.expires_at < today %} <br><span class="status-expired">期限切れ</span>
+                                {% else %}
+                                <br><span class="status-active">有効</span>
+                                {% endif %}
+                                {% else %}
+                                <span class="status-active">無期限</span>
+                                {% endif %}
+                        </td>
+                        <td>
+                            <form action="/admin/delete" method="post" onsubmit="return confirm('本当に削除しますか？');">
+                                <input type="hidden" name="token_id" value="{{ t.id }}">
+                                <button type="submit" class="btn-danger">削除</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </div>
+    {% endif %}
+
+</body>
+
+</html>

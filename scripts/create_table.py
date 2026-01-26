@@ -61,7 +61,10 @@ def create_tables(engine):
             'tokens', metadata,
             Column('id', BigInteger, primary_key=True, autoincrement=True),
             Column('token', String(255), unique=True, nullable=False, index=True),
-            Column('plan_type', String(50), nullable=False), # 'bulk' or 'subscription'
+            Column('plan_type', String(50), nullable=False), # 'bulk', 'subscription', or 'trial'
+            Column('user_name', String(255)),
+            Column('user_email', String(255)),
+            Column('expires_at', Date), # 削除設定日
             Column('is_active', Boolean, default=True, nullable=False),
             Column('created_at', DateTime, server_default=func.now())
         )

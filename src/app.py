@@ -1,9 +1,10 @@
 # src/app.py
 
 import os
-from flask import Flask, render_template, request, Response, stream_with_context, jsonify
-from sqlalchemy import create_engine, text, select
-from datetime import datetime
+import secrets
+from flask import Flask, render_template, request, Response, stream_with_context, jsonify, redirect, url_for, session
+from sqlalchemy import create_engine, text, select, insert, update, delete
+from datetime import datetime, date
 from io import StringIO
 import csv
 import config
@@ -11,6 +12,11 @@ import config
 from scripts.create_table import MetaData
 
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallback-secret-key-for-admin")
+
+@app.context_processor
+def inject_now():
+    return {'now_date': date.today}
 
 def get_db_engine():
     """データベースエンジンを返す"""
@@ -25,19 +31,26 @@ def validate_token(token_str):
     metadata.reflect(bind=engine)
     tokens_table = metadata.tables['tokens']
     with engine.connect() as connection:
-        stmt = select(tokens_table.c.plan_type).where(
+        stmt = select(tokens_table.c.plan_type, tokens_table.c.expires_at).where(
             tokens_table.c.token == token_str,
             tokens_table.c.is_active == True
         )
-        result = connection.execute(stmt).scalar_one_or_none()
-    if result == 'bulk':
-        return 'bulk', config.TABLE_NAME_FIXED
-    elif result == 'subscription':
-        return 'subscription', config.TABLE_NAME
-    elif result == 'trial':
-        return 'trial', config.TABLE_NAME
-    else:
-        return None, None
+        row = connection.execute(stmt).fetchone()
+    
+    if row:
+        plan_type, expires_at = row
+        # 有効期限のチェック
+        if expires_at and expires_at < date.today():
+            return None, None
+            
+        if plan_type == 'bulk':
+            return 'bulk', config.TABLE_NAME_FIXED
+        elif plan_type == 'subscription':
+            return 'subscription', config.TABLE_NAME
+        elif plan_type == 'trial':
+            return 'trial', config.TABLE_NAME
+            
+    return None, None
 
 def get_bulk_plan_date_range(engine):
     """買い切りプランの有効な日付範囲 (min, max) をDBから取得する"""
@@ -59,6 +72,94 @@ def index():
 def trial():
     return render_template('trial.html')
 
+# --- 管理者用ルート ---
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == config.ADMIN_PASSWORD:
+            session['is_admin'] = True
+            return redirect(url_for('admin'))
+        else:
+            return render_template('admin.html', error="パスワードが違います")
+
+    if not session.get('is_admin'):
+        return render_template('admin.html', login_required=True)
+
+    engine = get_db_engine()
+    metadata = MetaData()
+    metadata.reflect(bind=engine)
+    tokens_table = metadata.tables['tokens']
+    
+    with engine.connect() as connection:
+        # トークン一覧を取得
+        stmt = select(tokens_table).order_by(tokens_table.c.created_at.desc())
+        tokens = connection.execute(stmt).fetchall()
+        
+    return render_template('admin.html', tokens=tokens)
+
+@app.route('/admin/issue', methods=['POST'])
+def admin_issue():
+    if not session.get('is_admin'):
+        return "Unauthorized", 401
+        
+    user_name = request.form.get('user_name')
+    user_email = request.form.get('user_email')
+    plan_type = request.form.get('plan_type')
+    expires_at_str = request.form.get('expires_at')
+    
+    expires_at = None
+    if expires_at_str:
+        expires_at = datetime.strptime(expires_at_str, '%Y-%m-%d').date()
+        
+    new_token = secrets.token_hex(16)
+    
+    engine = get_db_engine()
+    metadata = MetaData()
+    metadata.reflect(bind=engine)
+    tokens_table = metadata.tables['tokens']
+    
+    with engine.connect() as connection:
+        stmt = insert(tokens_table).values(
+            token=new_token,
+            plan_type=plan_type,
+            user_name=user_name,
+            user_email=user_email,
+            expires_at=expires_at,
+            is_active=True
+        )
+        connection.execute(stmt)
+        connection.commit()
+        
+    return redirect(url_for('admin'))
+
+@app.route('/admin/delete', methods=['POST'])
+def admin_delete():
+    if not session.get('is_admin'):
+        return "Unauthorized", 401
+        
+    token_id = request.form.get('token_id')
+    
+    engine = get_db_engine()
+    metadata = MetaData()
+    metadata.reflect(bind=engine)
+    tokens_table = metadata.tables['tokens']
+    
+    with engine.connect() as connection:
+        stmt = delete(tokens_table).where(tokens_table.c.id == token_id)
+        connection.execute(stmt)
+        connection.commit()
+        
+    return redirect(url_for('admin'))
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('is_admin', None)
+    return redirect(url_for('admin'))
+
+# --- API ルート ---
+
 @app.route('/plan_info', methods=['GET'])
 def get_plan_info():
     """トークンに基づいてプラン情報を返す"""
@@ -77,7 +178,6 @@ def get_plan_info():
                 "max_date": max_date.strftime('%Y-%m-%d')
             })
         else:
-            # データがまだ入っていない場合などのフォールバック
             return jsonify({"status": "error", "message": "買い切りプランのデータ期間を取得できませんでした。"}), 500
 
     elif plan_type == 'subscription':
@@ -116,7 +216,6 @@ def download():
         if not min_valid_date or not max_valid_date:
             return "Error: Could not determine valid date range for this plan.", 500
 
-        # リクエストされた日付が有効範囲内かチェック
         if start_date_str:
             try:
                 req_start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
@@ -133,7 +232,7 @@ def download():
             except ValueError:
                 return "Error: Invalid end_date format. Please use YYYY-MM-DD.", 400
 
-    # お試しプランの場合、期間を強制的に 2025-01-01 〜 2025-01-07 に制限する
+    # お試しプランの場合
     if plan_type == 'trial':
         start_date_str = "2025-01-01"
         end_date_str = "2025-01-07"
@@ -148,7 +247,6 @@ def download():
             base_query += ' AND "証券コード" IN :tickers'
             params['tickers'] = tuple(tickers)
     
-    # start_date, end_date はサニタイズ済みの文字列をそのまま使う
     if start_date_str:
         base_query += ' AND "日付" >= :start_date'
         params['start_date'] = start_date_str

@@ -12,6 +12,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 TABLE_NAME = "stockdata"
 TABLE_NAME_FIXED = "stockdata_fixed"
 TICKER_CSV_FILE = "data/tickers.csv"
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
 
 
 # --- VPS (Docker) 環境用の接続設定 ---
