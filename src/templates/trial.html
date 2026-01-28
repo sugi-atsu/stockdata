@@ -5,6 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>株価データ ダウンローダー</title>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-PVKS6KST');</script>
+    <!-- End Google Tag Manager -->
+
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -156,6 +164,11 @@
 </head>
 
 <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PVKS6KST"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+
     <div class="container">
         <div id="header-area">
             <h1>株価データ CSVダウンローダー (無料体験版)</h1>
@@ -322,6 +335,13 @@
                     event.preventDefault(); // フォームの送信を中止
                     errorMessageEl.textContent = errorMessage;
                     planDisplay.className = 'error';
+                } else {
+                    // ダウンロード成功（バリデーション通過）時にGTMイベントを発火
+                    window.dataLayer = window.dataLayer || [];
+                    window.dataLayer.push({
+                        'event': 'trial_download',
+                        'plan_name': currentPlanInfo.plan_name || '無料体験版'
+                    });
                 }
             }
         });
